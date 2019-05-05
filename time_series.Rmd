@@ -1,0 +1,189 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+My notes from Dr. Joshua Kerr's Time Series Analysis course at CSU Eastbay, Spring '18.
+
+Simulate and plot an AR2 model.
+```{r}
+set.seed(413)
+ar2 = arima.sim(list(order=c(2,0,0), ar=c(.5,.2)), 2000)
+acf(ar2)
+pacf(ar2)
+```
+Simulation of AR1 models with strong positive and negative corelations.
+```{r}
+set.seed(413)
+plot(arima.sim(list(order=c(1,0,0), ar=.9), 100))
+plot(arima.sim(list(order=c(1,0,0), ar=-.9), 100))
+
+```
+
+```{r}
+library(astsa)
+ljj = log(jj)
+ts.plot(ljj)
+acf(ljj)
+pacf(ljj)
+```
+Time series regression
+```{r}
+quarters = rep(1:4, 21)
+fit1 = lm(ljj ~ time(ljj) + factor(quarters))
+summary(fit1)
+fitted = ts(fit1$fitted.values, start =1960, freq=4)
+ts.plot(ljj, fitted, gpars=list(col=c("black", "red")))
+acf(resid(fit1))
+pacf(resid(fit1))
+```
+
+ARIMA
+```{r}
+fit2 = arima(ljj, order=c(1, 0, 1))
+fit2
+```
+
+simulation of arima(1,1,0)
+```{r}
+set.seed(612)
+ts.sim = arima.sim(list(order=c(1,1,0), ar=.8), n=500)
+ts.plot(ts.sim)
+
+
+
+```
+
+ACF and PACF of the differenced series
+```{r}
+dif = diff(ts.sim, diff=1)
+ts.plot(dif)
+
+acf(dif)
+pacf(dif)
+```
+
+Fitting an AR1 model to the differenced series
+```{r}
+wh = arima(ts.sim, order=c(1,1,0))
+wh
+acf(wh$res)
+pacf(wh$res)
+```
+
+Forecasting the arima model
+```{r}
+wh = arima(ts.sim, order=c(1,1,0))
+pred = predict(wh, n.ahead=12)
+ts.plot(ts.sim, xlim=c(400,600))
+lines(pred$pred, col="red")
+lines(pred$pred + 1.96*pred$se, col="blue", lty=2)
+lines(pred$pred - 1.96*pred$se, col="blue", lty=2)
+
+```
+
+ARMAacf
+```{r}
+ARMAacf(ar=.8, lag.max=20, pacf=FALSE)
+```
+
+Simulation of a arima(1,0,1)
+```{r}
+set.seed(612)
+ts.sim = arima.sim(list(order=c(1,0,1), ar=.8, ma=.8), n=500)
+ts.plot(ts.sim)
+```
+
+Fitting an AR2 using ar.yw()
+```{r}
+library(astsa)
+rec.yw = ar.yw(rec, order=2)
+rec.yw$mean
+rec.yw$ar
+sqrt(diag(rec.yw$asy.var.coef))
+rec.yw$var.pred
+rec.pr = predict(rec.yw, n.ahead=24)
+rec.pr
+```
+
+Fitting AR2 using mle.
+```{r}
+rec.mle = ar.mle(rec, order=2)
+rec.mle$ar
+```
+
+Fitting AR2 using ARIMA()
+```{r}
+arima(rec, order=c(2,0,0))
+```
+
+```{r}
+acf(rec.yw$resid, na.action=na.pass)
+acf(rec.mle$resid, na.action=na.pass)
+```
+
+Seasonal ARIMA (SARIMA) w/ fed data
+```{r}
+ts.plot(prodn)
+fed.fit = arima(prodn, order=c(1,1,1), seasonal=list(order=c(2,1,1), period=12))
+fed.fit
+tsdiag(fed.fit, fog.lag=48)
+pacf(fed.fit$residuals)
+fed.pr = predict(fed.fit, n.ahead=24)
+fed.pr
+```
+
+SARIMA using sarima() and sarima.for()
+```{r}
+fed.fit2 = sarima(prodn, 1,1,1,2,1,1,12, no.constant=TRUE)
+fed.pr2 = sarima.for(prodn, 24, 1,1,1,2,1,1,12)
+```
+
+SARIMA (Air Passenger Miles)
+```{r}
+library(fma)
+library(astsa)
+plot.ts(log(airpass))
+fit = sarima(log(airpass),0,1,1,0,1,1,12)
+```
+
+Simple Exponential Smoothing
+```{r}
+library(astsa)
+plot(AirPassengers)
+hw = HoltWinters(rec, gamma=FALSE, beta=FALSE)
+plot(hw)
+s = sqrt(hw$SSE/(length(soi)-1))
+pr = predict(hw, n.ahead=50, prediction.interval = TRUE)
+plot(hw, pr)
+```
+Holt Exponential Smoothing (non-constant growth rate)
+```{r}
+hw = HoltWinters(rec, beta=TRUE, gamma=FALSE)
+plot(hw)
+hw
+pr = predict(hw, n.ahead=50, prediction.interval = TRUE)
+plot(hw, pr)
+```
+
+Hold-Winters Exponential Smoothing (non-constant growthrate plus seasonality)
+```{r}
+hw = HoltWinters(AirPassengers)
+plot(hw)
+pr = predict(hw, n.ahead=50, prediction.interval = TRUE)
+plot(hw, pr)
+hw$alpha
+hw$beta
+hw$gamma
+```
+
+```{r}
+ts.plot(rec)
+acf(rec)
+pacf(rec)
+fit1 = arima(rec, order=c(2,0,0),
+             seasonal=list(order=c(2,0,0)))
+acf(fit1$res)
+pacf(fit1$res)
+```
+
